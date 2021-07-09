@@ -50,7 +50,7 @@
 -- semicolons at the end of a SQL statement.
 
 -- There's only one row in this table
-CREATE TABLE dataset (
+CREATE TABLE IF NOT EXISTS dataset (
   id $PRIMARY_KEY$,
   mmpdb_version INTEGER NOT NULL,
   title VARCHAR(255) NOT NULL $COLLATE$,    -- human-visible label
@@ -70,37 +70,37 @@ CREATE TABLE dataset (
 -- Each used input structure gets its own 'compound'
 -- This table might not exist for rule-only data sets.
 
-CREATE TABLE compound (
+CREATE TABLE IF NOT EXISTS compound (
   id $PRIMARY_KEY$,
   public_id VARCHAR(255) NOT NULL $COLLATE$,    -- the public compound id (should this have a better name?)
   input_smiles VARCHAR(255) NOT NULL $COLLATE$, -- the input SMILES, before salt removal
   clean_smiles VARCHAR(255) NOT NULL $COLLATE$, -- the SMILES after salt removal
   clean_num_heavies INTEGER NOT NULL $COLLATE$  -- the number of heavies in the cleaned SMILES (needed?)
-  );
+);
 
 
 -- Normalized property names (eg, "IC50" might be mapped to 3).
 
-CREATE TABLE property_name (
+CREATE TABLE IF NOT EXISTS property_name (
   id $PRIMARY_KEY$,
   name VARCHAR(255) NOT NULL $COLLATE$
-  );
+);
 
 
 -- Properties for each input compound
 
-CREATE TABLE compound_property (
+CREATE TABLE IF NOT EXISTS compound_property (
   id $PRIMARY_KEY$,
   compound_id INTEGER NOT NULL,
   property_name_id INTEGER NOT NULL,
   value REAL NOT NULL,
   FOREIGN KEY (compound_id) REFERENCES compound (id),
   FOREIGN KEY (property_name_id) REFERENCES property_name (id)
-  );
+);
 
 
 -- Normalized SMILES for the LHS or RHS of the rule transformation SMILES.
-CREATE TABLE rule_smiles (
+CREATE TABLE IF NOT EXISTS rule_smiles (
   id $PRIMARY_KEY$,
   smiles VARCHAR(255) NOT NULL $COLLATE$,
   num_heavies INTEGER
@@ -111,15 +111,15 @@ CREATE TABLE rule_smiles (
 -- which remains constant in the transformation. It typically has one
 -- or more R-groups. It is omitted from the transformation A>>B.
 
-CREATE TABLE constant_smiles (
+CREATE TABLE IF NOT EXISTS constant_smiles (
   id $PRIMARY_KEY$,
   smiles VARCHAR(255)
-  );
+);
 
 
 -- -- A matched molecular pair rule
 
-CREATE TABLE rule (
+CREATE TABLE IF NOT EXISTS rule (
   id $PRIMARY_KEY$,
 
   -- The SMIRKS/transformation SMILES for this rule is:
@@ -127,7 +127,7 @@ CREATE TABLE rule (
   --   rule_smiles[id = to_smiles_id].smiles
   from_smiles_id INTEGER NOT NULL REFERENCES rule_smiles(id),
   to_smiles_id INTEGER NOT NULL REFERENCES rule_smiles(id)
-  );
+);
 
 
 -- Table with normalized fingerprints for the rule_environment.
@@ -137,39 +137,41 @@ CREATE TABLE rule (
 -- space, they are SHA2 hashed then base64 coded, so only 43 bytes
 -- (344 bits) are needed.  They cannot be used for similarity testing.
 
-CREATE TABLE environment_fingerprint (
- id INTEGER PRIMARY KEY,
- fingerprint VARCHAR(43) NOT NULL $COLLATE$,  -- the base64-encoded SHA2
- parent_id INTEGER   --Allow figuring out the parent of a given Env-FP
- );
+-- fingerprint: allow figuring out the parent of a given Env-FP
+-- parent_id: the base64-encoded SHA2
+CREATE TABLE IF NOT EXISTS environment_fingerprint (
+  id INTEGER PRIMARY KEY,
+  fingerprint VARCHAR(43) NOT NULL $COLLATE$,  
+  parent_id INTEGER
+);
 
 
 -- A rule can have multiple rule environment, one per radius.
 
-CREATE TABLE rule_environment (
- id INTEGER PRIMARY KEY,
- rule_id INTEGER REFERENCES rule(id),
- environment_fingerprint_id INTEGER REFERENCES environment_fingerprint(id),
- radius INTEGER
- -- should I keep track of the number of pairs?
- -- (the rule_env..._statistics "count" is the number of pairs with a given property)
- );
+CREATE TABLE IF NOT EXISTS rule_environment (
+  id INTEGER PRIMARY KEY,
+  rule_id INTEGER REFERENCES rule(id),
+  environment_fingerprint_id INTEGER REFERENCES environment_fingerprint(id),
+  radius INTEGER
+  -- should I keep track of the number of pairs?
+  -- (the rule_env..._statistics "count" is the number of pairs with a given property)
+);
 
 
 -- The pairs that belong to a rule_environment
 
-CREATE TABLE pair (
+CREATE TABLE IF NOT EXISTS pair (
   id $PRIMARY_KEY$,
-  rule_environment_id INTEGER REFERENCES rule_environment (id) NOT NULL,
-  compound1_id INTEGER NOT NULL REFERENCES compound (id),
-  compound2_id INTEGER NOT NULL REFERENCES compound (id),
+  rule_environment_id INTEGER NOT NULL REFERENCES rule_environment(id),
+  compound1_id INTEGER NOT NULL REFERENCES compound(id),
+  compound2_id INTEGER NOT NULL REFERENCES compound(id),
   constant_id INTEGER REFERENCES constant_smiles(id)
-  );
+);
 
 
 -- The aggregate property deltas for each rule environment
 
-CREATE TABLE rule_environment_statistics (
+CREATE TABLE IF NOT EXISTS rule_environment_statistics (
   id $PRIMARY_KEY$,
   rule_environment_id INTEGER REFERENCES rule_environment (id),
   property_name_id INTEGER NOT NULL REFERENCES property_name (id),
@@ -185,4 +187,4 @@ CREATE TABLE rule_environment_statistics (
   max REAL NOT NULL,
   paired_t REAL,
   p_value REAL
-  );
+);

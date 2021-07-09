@@ -81,8 +81,8 @@ class SQLiteConfig:
 
 
 class MySQLConfig:
-    PRIMARY_KEY = "INTEGER AUTO_INCREMENT"
-    COLLATE = "COLLATE latin_bin"  # default is case-insensitive; force binary
+    PRIMARY_KEY = "INTEGER AUTO_INCREMENT PRIMARY KEY"
+    COLLATE = "COLLATE utf8_general_ci"  # default is case-insensitive; force binary
         
 
 def get_schema_for_database(db_config):
