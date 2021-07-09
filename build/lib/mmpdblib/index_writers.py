@@ -160,7 +160,7 @@ class BaseSqliteIndexWriter(object):
         execute_statement = """
             INSERT INTO dataset (id, mmpdb_version, title, creation_date, 
             fragment_options, index_options, is_symmetric) 
-            VALUES (1, 2, %s, %s, %s, %s, %d)"""
+            VALUES (1, 2, %s, %s, %s, %s, %s)"""
         self.conn.execute(execute_statement, 
             (self.title, creation_date, fragment_options_str,
             index_options_str, index_options.symmetric))
