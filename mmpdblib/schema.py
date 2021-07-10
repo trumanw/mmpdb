@@ -128,6 +128,10 @@ def create_schema_for_sqlite(sqlite_db):
     _execute_sql(c,
                  get_schema_for_database(SQLiteConfig))
 
+def create_schema_for_mysql(mysql_db):
+    c = mysql_db.cursor()
+    _execute_sql(c,
+                get_schema_for_database(MySQLConfig))
 
 def create_index(c):
     _execute_sql(c, get_create_index_sql())

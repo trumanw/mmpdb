@@ -355,7 +355,7 @@ def open_mysql_index_writer(dbUrl, title):
                              database=dbc.path.lstrip('/'))
     klass = SQLiteIndexWriter
 
-    schema.create_schema_for_sqlite(db)
+    schema.create_schema_for_mysql(db)
     conn = db.cursor()
 
     return klass(db, conn, title)
