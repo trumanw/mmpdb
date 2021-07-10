@@ -1054,4 +1054,5 @@ def main(argv=None):
     parsed_args.command(parsed_args.subparser, parsed_args)
 
 if __name__ == "__main__":
+    __spec__ = None
     main()
