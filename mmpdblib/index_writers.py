@@ -96,41 +96,41 @@ class TableIndexWriter(object):
         self._W("INDEX_OPTIONS\t%s\n" % (json.dumps(list(index_options.to_dict().items())),))
 
     def add_property_name(self, property_name_idx, property_name):
-        self._W("PROPNAME\t%d\t%s\n" % (property_name_idx, property_name))
+        self._W("PROPNAME\t%s\t%s\n" % (property_name_idx, property_name))
         
     def add_rule_smiles(self, smiles_idx, smiles):
-        self._W("RULE_SMILES\t%d\t%s\n" % (smiles_idx, smiles))
+        self._W("RULE_SMILES\t%s\t%s\n" % (smiles_idx, smiles))
 
     def add_rule(self, rule_idx, from_smiles_idx, to_smiles_idx):
-        self._W("RULE\t%d\t%d\t%d\n" % (rule_idx, from_smiles_idx, to_smiles_idx))
+        self._W("RULE\t%s\t%s\t%s\n" % (rule_idx, from_smiles_idx, to_smiles_idx))
 
     def add_environment_fingerprint(self, fp_idx, environment_fingerprint):
-        self._W("FINGERPRINT\t%d\t%s\n" % (fp_idx, environment_fingerprint))
+        self._W("FINGERPRINT\t%s\t%s\n" % (fp_idx, environment_fingerprint))
 
     # Added to account for parents in indexing (only has an effect on SQLite Tables)
     def add_environment_fingerprint_parent(self, fp_idx, environment_fingerprint, parent_idx):
-        self._W("FINGERPRINT\t%d\t%s\n" % (fp_idx, environment_fingerprint, parent_idx))
+        self._W("FINGERPRINT\t%s\t%s\n" % (fp_idx, environment_fingerprint, parent_idx))
 
     def add_rule_environment(self, rule_env_idx, rule_idx, env_fp_idx, radius):
-        self._W("RULEENV\t%d\t%d\t%d\t%d\n" % (rule_env_idx, rule_idx, env_fp_idx, radius))
+        self._W("RULEENV\t%s\t%s\t%s\t%s\n" % (rule_env_idx, rule_idx, env_fp_idx, radius))
 
     def add_compound(self, compound_idx, compound_id, input_smiles,
                      normalized_smiles, num_normalized_heavies):
-        self._W("COMPOUND\t%d\t%s\t%s\t%s\t%d\n" % (
+        self._W("COMPOUND\t%s\t%s\t%s\t%s\t%s\n" % (
             compound_idx, compound_id, input_smiles,
             normalized_smiles, num_normalized_heavies))
         
     def add_constant_smiles(self, smiles_idx, constant_smiles):
-        self._W("CONSTANT_SMILES\t%d\t%s\n" % (smiles_idx, constant_smiles))
+        self._W("CONSTANT_SMILES\t%s\t%s\n" % (smiles_idx, constant_smiles))
 
     def add_rule_environment_pair(self, pair_idx, env_idx, compound1_idx, compound2_idx, constant_idx):
-        self._W("PAIR%d\t\t%d\t%d\t%d\t%d\n" % (pair_idx, env_idx, compound1_idx, compound2_idx, constant_idx))
+        self._W("PAIR%s\t\t%s\t%s\t%s\t%s\n" % (pair_idx, env_idx, compound1_idx, compound2_idx, constant_idx))
 
     def add_compound_property(self, compound_idx, property_name_idx, value):
-        self._W("PROP\t%d\t%d\t%s\n" % (compound_idx, property_name_idx, value))
+        self._W("PROP\t%s\t%s\t%s\n" % (compound_idx, property_name_idx, value))
 
     def add_rule_environment_statistics(self, rule_env_idx, property_name_idx, values):
-        self._W("RULEENV_STATS\t%d\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" %
+        self._W("RULEENV_STATS\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" %
                     ((rule_env_idx, property_name_idx) + tuple(values)))
 
     def end(self, reporter):
@@ -168,12 +168,11 @@ class BaseSqliteIndexWriter(object):
     def add_property_name(self, property_name_idx, property_name):
         # self.conn.execute("INSERT INTO property_name (id, name) VALUES (?, ?)",
         #                   (property_name_idx, property_name))
-        statement = "INSERT INTO property_name (id, name) VALUES (%d, %s)"
+        statement = "INSERT INTO property_name (id, name) VALUES (%s, %s)"
         self.conn.execute(statement, (property_name_idx, property_name))
         
     def add_rule_smiles(self, smiles_idx, smiles):
-        statement = """
-            INSERT INTO rule_smiles (id, smiles, num_heavies) VALUES (%d, %s, %d)"""
+        statement = """INSERT INTO rule_smiles (id, smiles, num_heavies) VALUES (%s, %s, %s)"""
         self.conn.execute(statement,
                           (smiles_idx, smiles, get_num_heavies_from_smiles(smiles)))
 
@@ -181,7 +180,7 @@ class BaseSqliteIndexWriter(object):
         # self.conn.execute("INSERT INTO rule (id, from_smiles_id, to_smiles_id) "
         #                   "  VALUES (?, ?, ?)",
         #                   (rule_idx, from_smiles_idx, to_smiles_idx))
-        statement = "INSERT INTO rule (id, from_smiles_id, to_smiles_id) VALUES (%d, %d, %d)"
+        statement = "INSERT INTO rule (id, from_smiles_id, to_smiles_id) VALUES (%s, %s, %s)"
         self.conn.execute(statement,
                           (rule_idx, from_smiles_idx, to_smiles_idx))
 
@@ -189,7 +188,7 @@ class BaseSqliteIndexWriter(object):
         # self.conn.execute("INSERT INTO environment_fingerprint (id, fingerprint) "
         #                   " VALUES (?, ?)",
         #                   (fp_idx, environment_fingerprint))
-        statement = "INSERT INTO environment_fingerprint (id, fingerprint) VALUES (%d, %s)"
+        statement = "INSERT INTO environment_fingerprint (id, fingerprint) VALUES (%s, %s)"
         self.conn.execute(statement,
                           (fp_idx, environment_fingerprint))
 
@@ -198,7 +197,7 @@ class BaseSqliteIndexWriter(object):
         # self.conn.execute("INSERT INTO environment_fingerprint (id, fingerprint, parent_id) "
         #                   " VALUES (?, ?, ?)",
         #                   (fp_idx, environment_fingerprint, parent_idx))
-        statement = "INSERT INTO environment_fingerprint (id, fingerprint, parent_id) VALUES (%d, %s, %d)"
+        statement = "INSERT INTO environment_fingerprint (id, fingerprint, parent_id) VALUES (%s, %s, %s)"
         self.conn.execute(statement,
                           (fp_idx, environment_fingerprint, parent_idx))
 
@@ -206,7 +205,7 @@ class BaseSqliteIndexWriter(object):
         # self.conn.execute("INSERT INTO rule_environment (id, rule_id, environment_fingerprint_id,  radius) "
         #                   "  VALUES (?, ?, ?, ?)",
         #                   (rule_env_idx, rule_idx, env_fp_idx, radius))
-        statement = "INSERT INTO rule_environment (id, rule_id, environment_fingerprint_id,  radius) VALUES (%d, %d, %d, %d)"
+        statement = "INSERT INTO rule_environment (id, rule_id, environment_fingerprint_id,  radius) VALUES (%s, %s, %s, %s)"
         self.conn.execute(statement,
                           (rule_env_idx, rule_idx, env_fp_idx, radius))
 
@@ -215,28 +214,28 @@ class BaseSqliteIndexWriter(object):
         # self.conn.execute("INSERT INTO compound (id, public_id, input_smiles, clean_smiles, clean_num_heavies) "
         #                   "   VALUES (?, ?, ?, ?, ?)",
         #                   (compound_idx, compound_id, input_smiles, normalized_smiles, num_normalized_heavies))
-        statement = "INSERT INTO compound (id, public_id, input_smiles, clean_smiles, clean_num_heavies) VALUES (%d, %s, %s, %s, %d)"
+        statement = "INSERT INTO compound (id, public_id, input_smiles, clean_smiles, clean_num_heavies) VALUES (%s, %s, %s, %s, %s)"
         self.conn.execute(statement,
                           (compound_idx, compound_id, input_smiles, normalized_smiles, num_normalized_heavies))
         
     def add_constant_smiles(self, smiles_idx, constant_smiles):
         # self.conn.execute("INSERT INTO constant_smiles (id, smiles) VALUES (?, ?)",
         #                   (smiles_idx, constant_smiles))
-        statement = "INSERT INTO constant_smiles (id, smiles) VALUES (%d, %s)"
+        statement = "INSERT INTO constant_smiles (id, smiles) VALUES (%s, %s)"
         self.conn.execute(statement, (smiles_idx, constant_smiles))
 
     def add_rule_environment_pair(self, pair_idx, env_idx, compound1_idx, compound2_idx, constant_idx):
         # self.conn.execute("INSERT INTO pair (id, rule_environment_id, compound1_id, compound2_id, constant_id) "
         #                   "  VALUES (?, ?, ?, ?, ?)",
         #                   (pair_idx, env_idx, compound1_idx, compound2_idx, constant_idx))
-        statement = "INSERT INTO pair (id, rule_environment_id, compound1_id, compound2_id, constant_id) VALUES (%d, %d, %d, %d, %d)"
+        statement = "INSERT INTO pair (id, rule_environment_id, compound1_id, compound2_id, constant_id) VALUES (%s, %s, %s, %s, %s)"
         self.conn.execute(statement,
                           (pair_idx, env_idx, compound1_idx, compound2_idx, constant_idx))
 
     def add_compound_property(self, compound_idx, property_name_idx, value):
         # self.conn.execute("INSERT INTO compound_property (compound_id, property_name_id, value) VALUES (?, ?, ?)",
         #                   (compound_idx, property_name_idx, value))
-        statement = "INSERT INTO compound_property (compound_id, property_name_id, value) VALUES (%d, %d, %f)"
+        statement = "INSERT INTO compound_property (compound_id, property_name_id, value) VALUES (%s, %s, %s)"
         self.conn.execute(statement,
                           (compound_idx, property_name_idx, value))
 
@@ -263,7 +262,7 @@ class BaseSqliteIndexWriter(object):
             INSERT INTO rule_environment_statistics 
                 (rule_environment_id, property_name_id, count, avg, std, kurtosis, 
                     skewness, min, q1, median, q3, max, paired_t, p_value) 
-                VALUES (%d, %d, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f)"""
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
         self.conn.execute(statement,
                           (rule_env_idx, property_name_idx, count, avg, std,
                            kurtosis, skewness, minval, q1, median, q3, maxval, paired_t, p_value))
@@ -287,8 +286,8 @@ class BaseSqliteIndexWriter(object):
         #                   "num_rule_environments=?, num_rule_environment_stats=? WHERE id = 1",
         #                   (num_compounds, num_rules, num_pairs, num_envs, num_stats))
         statement = """
-            UPDATE dataset set num_compounds=%d, num_rules=%f, num_pairs=%f, 
-            num_rule_environments=%d, num_rule_environment_stats=%d WHERE id = 1"""
+            UPDATE dataset set num_compounds=%s, num_rules=%s, num_pairs=%s, 
+            num_rule_environments=%s, num_rule_environment_stats=%s WHERE id = 1"""
         self.conn.execute(statement,
                           (num_compounds, num_rules, num_pairs, num_envs, num_stats))
         
