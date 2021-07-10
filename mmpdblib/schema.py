@@ -81,7 +81,7 @@ class SQLiteConfig:
 
 
 class MySQLConfig:
-    PRIMARY_KEY = "INTEGER AUTO_INCREMENT PRIMARY KEY"
+    PRIMARY_KEY = "INTEGER PRIMARY KEY"
     COLLATE = "COLLATE utf8_general_ci"  # default is case-insensitive; force binary
         
 
