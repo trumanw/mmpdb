@@ -58,6 +58,6 @@ setup(
     keywords="matched molecular pair, MMP, cheminformatics",
     
     packages=["mmpdblib", "mmpdblib.playhouse"],
-    package_data={"mmpdblib": ["schema.sql", "create_index.sql", "drop_index.sql"]},
+    package_data={"mmpdblib": ["schema.sql", "schema_mysql.sql", "create_index.sql", "drop_index.sql"]},
     scripts=["mmpdb"]
     )
