@@ -944,9 +944,10 @@ def find_matched_molecular_pairs_v2(
     # Processing all the combinations
     aggr_pairs = []
 
-    pbar = tqdm(comb_matches_with_args)
-    for comb_matches_it in pbar:
-        pbar.set_description("Finding pairs for constant smiles %s" % comb_matches_it[3])
+    # pbar = tqdm(comb_matches_with_args)
+    # for comb_matches_it in pbar:
+        # pbar.set_description("Finding pairs for constant smiles %s" % comb_matches_it[3])
+    for comb_matches_it in tqdm(comb_matches_with_args):
         pairs = get_pairs_from_matches(comb_matches_it, 
                 max_radius=max_radius, 
                 max_heavies_transf=max_heavies_transf,
@@ -1332,9 +1333,10 @@ class MMPWriter(BaseWriter):
         has_properties = (self.properties is not None)
 
         pair_i = -1
-        pbar = tqdm(pairs)
-        for pair_i, pair in enumerate(pbar):
-            pbar.set_description("Processing %s " % pair_i)
+        # pbar = tqdm(pairs)
+        # for pair_i, pair in enumerate(pbar):
+            # pbar.set_description("Processing %s " % pair_i)
+        for pair_i, pair in enumerate(tqdm(pairs)):
             # Figure out which rule it goes into.
             rule_idx = self._rule_table[pair.smirks]
 
