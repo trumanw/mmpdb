@@ -413,6 +413,8 @@ p.add_argument("--memory", action="store_true",
                help="Report a summary of the memory use")
 p.add_argument("fragment_filename", nargs="?", default=None,
                help="SMILES filename (default: read from stdin)")
+p.add_argument("--speed", metavar="FORMAT", choices=("normal", "fast", "ultra"),
+               help="Type of boosting performance mode. One of 'normal' (default), 'fast', 'ultra' (not implemented yet). ")
 
 p.set_defaults(command=index_command,
                subparser=p)
