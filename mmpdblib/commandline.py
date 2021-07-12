@@ -404,8 +404,8 @@ p.add_argument("--output", "-o", metavar="FILENAME",
                help=("save the fragment data to FILENAME. "
                      "Default for mmpdb is based on the fragment filename, "
                      "otherwise stdout."))
-p.add_argument("--out", metavar="FORMAT", choices=("csv", "csv.gz", "mmpa", "mmpa.gz", "mmpdb"),
-               help="Output format. One of 'mmpdb' (default), 'csv', 'csv.gz', 'mmpa' or 'mmpa.gz'. "
+p.add_argument("--out", metavar="FORMAT", choices=("csv", "csv.gz", "mmpa", "mmpa.gz", "mmpdb", "mysql"),
+               help="Output format. One of 'mmpdb' (default), 'csv', 'csv.gz', 'mmpa' or 'mmpa.gz' or 'mysql'. "
                "If not present, guess from the filename, and default to 'mmpdb'")
 p.add_argument("--title",
                help="A short description of the dataset. If not given, base the title on the filename")
@@ -413,6 +413,8 @@ p.add_argument("--memory", action="store_true",
                help="Report a summary of the memory use")
 p.add_argument("fragment_filename", nargs="?", default=None,
                help="SMILES filename (default: read from stdin)")
+p.add_argument("--speed", metavar="FORMAT", choices=("normal", "fast", "ultra"),
+               help="Type of boosting performance mode. One of 'normal' (default), 'fast', 'ultra' (not implemented yet). ")
 
 p.set_defaults(command=index_command,
                subparser=p)
@@ -1054,4 +1056,5 @@ def main(argv=None):
     parsed_args.command(parsed_args.subparser, parsed_args)
 
 if __name__ == "__main__":
+    __spec__ = None
     main()

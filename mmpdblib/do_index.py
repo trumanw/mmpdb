@@ -187,9 +187,14 @@ def index_command(parser, args):
     start_mmp_memory = get_memory_use()
     environment_cache = index_algorithm.EnvironmentCache()
 
-    pairs = index_algorithm.find_matched_molecular_pairs(
-        fragment_index, fragment_reader, index_options, environment_cache,
-        max_radius=args.max_radius, reporter=reporter)
+    if args.speed is None or args.speed == 'normal':
+        pairs = index_algorithm.find_matched_molecular_pairs(
+            fragment_index, fragment_reader, index_options, environment_cache,
+            max_radius=args.max_radius, reporter=reporter)
+    elif args.speed == 'fast':
+        pairs = index_algorithm.find_matched_molecular_pairs_v2(
+            fragment_index, fragment_reader, index_options, environment_cache,
+            max_radius=args.max_radius, reporter=reporter)
 
     with index_algorithm.open_mmpa_writer(args.output, format=args.out,
                                           title=title,

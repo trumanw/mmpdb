@@ -44,6 +44,7 @@ from . import config
 from ._compat import basestring
 
 SCHEMA_FILENAME = os.path.join(os.path.dirname(__file__), "schema.sql")
+MYSQL_SCHEMA_FILENAME = os.path.join(os.path.dirname(__file__), "schema_mysql.sql")
 CREATE_INDEX_FILENAME = os.path.join(os.path.dirname(__file__), "create_index.sql")
 DROP_INDEX_FILENAME = os.path.join(os.path.dirname(__file__), "drop_index.sql")
 
@@ -56,6 +57,13 @@ def get_schema_template():
             _schema_template = infile.read()
     return _schema_template
 
+_mysql_schema_template = None
+def get_mysql_schema_template():
+    global _mysql_schema_template
+    if _mysql_schema_template is None:
+        with open(MYSQL_SCHEMA_FILENAME) as infile:
+            _mysql_schema_template = infile.read()
+    return _mysql_schema_template
 
 _create_index_sql = None    
 def get_create_index_sql():
@@ -81,12 +89,21 @@ class SQLiteConfig:
 
 
 class MySQLConfig:
-    PRIMARY_KEY = "INTEGER AUTO_INCREMENT"
-    COLLATE = "COLLATE latin_bin"  # default is case-insensitive; force binary
+    PRIMARY_KEY = "INTEGER PRIMARY KEY"
+    COLLATE = "COLLATE utf8_general_ci"  # default is case-insensitive; force binary
         
 
 def get_schema_for_database(db_config):
     template = get_schema_template()
+    
+    # Handle some non-portable SQL
+    text = template.replace("$PRIMARY_KEY$", db_config.PRIMARY_KEY)
+    schema = text.replace("$COLLATE$", db_config.COLLATE)
+    
+    return schema
+
+def get_schema_for_mysql(db_config):
+    template = get_mysql_schema_template()
     
     # Handle some non-portable SQL
     text = template.replace("$PRIMARY_KEY$", db_config.PRIMARY_KEY)
@@ -128,6 +145,10 @@ def create_schema_for_sqlite(sqlite_db):
     _execute_sql(c,
                  get_schema_for_database(SQLiteConfig))
 
+def create_schema_for_mysql(mysql_db):
+    c = mysql_db.cursor()
+    _execute_sql(c,
+                get_schema_for_mysql(MySQLConfig))
 
 def create_index(c):
     _execute_sql(c, get_create_index_sql())

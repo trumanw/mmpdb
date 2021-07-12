@@ -40,6 +40,7 @@ from __future__ import absolute_import, print_function
 
 import os
 import sqlite3
+import pymysql
 import datetime
 import json
 import collections
@@ -52,6 +53,11 @@ import shutil
 # pip install --user https://github.com/rogerbinns/apsw/releases/download/3.16.2-r1/apsw-3.16.2-r1.zip \
 # --global-option=fetch --global-option=--version --global-option=3.16.2 --global-option=--all \
 # --global-option=build --global-option=--enable-all-extensions
+
+try:
+    from urlparse import urlparse  # Python 2
+except ImportError:
+    from urllib.parse import urlparse  # Python 3
 
 try:
     import apsw
@@ -90,41 +96,41 @@ class TableIndexWriter(object):
         self._W("INDEX_OPTIONS\t%s\n" % (json.dumps(list(index_options.to_dict().items())),))
 
     def add_property_name(self, property_name_idx, property_name):
-        self._W("PROPNAME\t%d\t%s\n" % (property_name_idx, property_name))
+        self._W("PROPNAME\t%s\t%s\n" % (property_name_idx, property_name))
         
     def add_rule_smiles(self, smiles_idx, smiles):
-        self._W("RULE_SMILES\t%d\t%s\n" % (smiles_idx, smiles))
+        self._W("RULE_SMILES\t%s\t%s\n" % (smiles_idx, smiles))
 
     def add_rule(self, rule_idx, from_smiles_idx, to_smiles_idx):
-        self._W("RULE\t%d\t%d\t%d\n" % (rule_idx, from_smiles_idx, to_smiles_idx))
+        self._W("RULE\t%s\t%s\t%s\n" % (rule_idx, from_smiles_idx, to_smiles_idx))
 
     def add_environment_fingerprint(self, fp_idx, environment_fingerprint):
-        self._W("FINGERPRINT\t%d\t%s\n" % (fp_idx, environment_fingerprint))
+        self._W("FINGERPRINT\t%s\t%s\n" % (fp_idx, environment_fingerprint))
 
     # Added to account for parents in indexing (only has an effect on SQLite Tables)
     def add_environment_fingerprint_parent(self, fp_idx, environment_fingerprint, parent_idx):
-        self._W("FINGERPRINT\t%d\t%s\n" % (fp_idx, environment_fingerprint, parent_idx))
+        self._W("FINGERPRINT\t%s\t%s\n" % (fp_idx, environment_fingerprint, parent_idx))
 
     def add_rule_environment(self, rule_env_idx, rule_idx, env_fp_idx, radius):
-        self._W("RULEENV\t%d\t%d\t%d\t%d\n" % (rule_env_idx, rule_idx, env_fp_idx, radius))
+        self._W("RULEENV\t%s\t%s\t%s\t%s\n" % (rule_env_idx, rule_idx, env_fp_idx, radius))
 
     def add_compound(self, compound_idx, compound_id, input_smiles,
                      normalized_smiles, num_normalized_heavies):
-        self._W("COMPOUND\t%d\t%s\t%s\t%s\t%d\n" % (
+        self._W("COMPOUND\t%s\t%s\t%s\t%s\t%s\n" % (
             compound_idx, compound_id, input_smiles,
             normalized_smiles, num_normalized_heavies))
         
     def add_constant_smiles(self, smiles_idx, constant_smiles):
-        self._W("CONSTANT_SMILES\t%d\t%s\n" % (smiles_idx, constant_smiles))
+        self._W("CONSTANT_SMILES\t%s\t%s\n" % (smiles_idx, constant_smiles))
 
     def add_rule_environment_pair(self, pair_idx, env_idx, compound1_idx, compound2_idx, constant_idx):
-        self._W("PAIR%d\t\t%d\t%d\t%d\t%d\n" % (pair_idx, env_idx, compound1_idx, compound2_idx, constant_idx))
+        self._W("PAIR%s\t\t%s\t%s\t%s\t%s\n" % (pair_idx, env_idx, compound1_idx, compound2_idx, constant_idx))
 
     def add_compound_property(self, compound_idx, property_name_idx, value):
-        self._W("PROP\t%d\t%d\t%s\n" % (compound_idx, property_name_idx, value))
+        self._W("PROP\t%s\t%s\t%s\n" % (compound_idx, property_name_idx, value))
 
     def add_rule_environment_statistics(self, rule_env_idx, property_name_idx, values):
-        self._W("RULEENV_STATS\t%d\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" %
+        self._W("RULEENV_STATS\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" %
                     ((rule_env_idx, property_name_idx) + tuple(values)))
 
     def end(self, reporter):
@@ -155,7 +161,7 @@ class BaseSqliteIndexWriter(object):
     def add_property_name(self, property_name_idx, property_name):
         self.conn.execute("INSERT INTO property_name (id, name) VALUES (?, ?)",
                           (property_name_idx, property_name))
-        
+
     def add_rule_smiles(self, smiles_idx, smiles):
         self.conn.execute("INSERT INTO rule_smiles (id, smiles, num_heavies) VALUES (?, ?, ?)",
                           (smiles_idx, smiles, get_num_heavies_from_smiles(smiles)))
@@ -179,7 +185,7 @@ class BaseSqliteIndexWriter(object):
     def add_rule_environment(self, rule_env_idx, rule_idx, env_fp_idx, radius):
         self.conn.execute("INSERT INTO rule_environment (id, rule_id, environment_fingerprint_id,  radius) "
                           "  VALUES (?, ?, ?, ?)",
-                          (rule_env_idx, rule_idx, env_fp_idx, radius))
+                          (rule_env_idx, rule_idx, env_fp_idx, radius)) 
 
     def add_compound(self, compound_idx, compound_id, input_smiles,
                      normalized_smiles, num_normalized_heavies):
@@ -189,7 +195,7 @@ class BaseSqliteIndexWriter(object):
         
     def add_constant_smiles(self, smiles_idx, constant_smiles):
         self.conn.execute("INSERT INTO constant_smiles (id, smiles) VALUES (?, ?)",
-                          (smiles_idx, constant_smiles))
+                          (smiles_idx, constant_smiles)) 
 
     def add_rule_environment_pair(self, pair_idx, env_idx, compound1_idx, compound2_idx, constant_idx):
         self.conn.execute("INSERT INTO pair (id, rule_environment_id, compound1_id, compound2_id, constant_id) "
@@ -201,16 +207,16 @@ class BaseSqliteIndexWriter(object):
                           (compound_idx, property_name_idx, value))
 
     def add_rule_environment_statistics(self, rule_env_idx, property_name_idx, values):
-        count, avg, std, kurtosis, skewness, min, q1, median, q3, max, paired_t, p_value = values
+        count, avg, std, kurtosis, skewness, minval, q1, median, q3, maxval, paired_t, p_value = values
         assert rule_env_idx is not None
         assert property_name_idx is not None
         assert count is not None
         assert avg is not None
-        assert min is not None
+        assert minval is not None
         assert q1 is not None
         assert median is not None
         assert q3 is not None
-        assert max is not None
+        assert maxval is not None
         # XXX check for too-large/infinite values?
 
         self.conn.execute("INSERT INTO rule_environment_statistics "
@@ -219,7 +225,7 @@ class BaseSqliteIndexWriter(object):
                           "  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                           (rule_env_idx, property_name_idx, count, avg, std,
                            kurtosis, skewness, min, q1, median, q3, max, paired_t, p_value))
-        
+
     def end(self, reporter):
         reporter.update("Building index ...")
         schema.create_index(self.conn)
@@ -234,12 +240,125 @@ class BaseSqliteIndexWriter(object):
         num_pairs = schema._get_one(self.conn.execute("SELECT count(*) from pair"))
         num_envs = schema._get_one(self.conn.execute("SELECT count(*) from rule_environment"))
         num_stats = schema._get_one(self.conn.execute("SELECT count(*) from rule_environment_statistics"))
+
         self.conn.execute("UPDATE dataset set num_compounds=?, num_rules=?, num_pairs=?, "
                           "num_rule_environments=?, num_rule_environment_stats=? WHERE id = 1",
                           (num_compounds, num_rules, num_pairs, num_envs, num_stats))
-        
+
         reporter.update("")
 
+class BaseMySQLIndexWriter(object):
+    def __init__(self, db, conn, title):
+        self.db = db
+        self.conn = conn
+        self.title = title
+    
+    def start(self, fragment_options, index_options):
+        creation_date = datetime.datetime.now().isoformat(sep=" ")
+        fragment_options_str = json.dumps(fragment_options.to_dict())
+        index_options_str = json.dumps(index_options.to_dict())
+
+        execute_statement = """
+            INSERT INTO dataset (id, mmpdb_version, title, creation_date, 
+            fragment_options, index_options, is_symmetric) 
+            VALUES (1, 2, %s, %s, %s, %s, %s)"""
+        self.conn.execute(execute_statement, 
+            (self.title, creation_date, fragment_options_str,
+            index_options_str, index_options.symmetric))
+
+    def add_property_name(self, property_name_idx, property_name):
+        statement = "INSERT INTO property_name (id, name) VALUES (%s, %s)"
+        self.conn.execute(statement, (property_name_idx, property_name))
+    
+    def add_rule_smiles(self, smiles_idx, smiles):
+        statement = """INSERT INTO rule_smiles (id, smiles, num_heavies) VALUES (%s, %s, %s)"""
+        self.conn.execute(statement,
+                          (smiles_idx, smiles, get_num_heavies_from_smiles(smiles)))
+
+    def add_rule(self, rule_idx, from_smiles_idx, to_smiles_idx):
+        statement = "INSERT INTO rule (id, from_smiles_id, to_smiles_id) VALUES (%s, %s, %s)"
+        self.conn.execute(statement,
+                          (rule_idx, from_smiles_idx, to_smiles_idx))
+    
+    def add_environment_fingerprint(self, fp_idx, environment_fingerprint):
+        statement = "INSERT INTO environment_fingerprint (id, fingerprint) VALUES (%s, %s)"
+        self.conn.execute(statement,
+                          (fp_idx, environment_fingerprint))
+
+    # Added to include a parent idx in the EnvironmentFingerprint table
+    def add_environment_fingerprint_parent(self, fp_idx, environment_fingerprint, parent_idx):
+        statement = "INSERT INTO environment_fingerprint (id, fingerprint, parent_id) VALUES (%s, %s, %s)"
+        self.conn.execute(statement,
+                          (fp_idx, environment_fingerprint, parent_idx))
+    
+    def add_rule_environment(self, rule_env_idx, rule_idx, env_fp_idx, radius):
+        statement = "INSERT INTO rule_environment (id, rule_id, environment_fingerprint_id,  radius) VALUES (%s, %s, %s, %s)"
+        self.conn.execute(statement,
+                          (rule_env_idx, rule_idx, env_fp_idx, radius))
+    
+    def add_compound(self, compound_idx, compound_id, input_smiles,
+                     normalized_smiles, num_normalized_heavies):
+        statement = "INSERT INTO compound (id, public_id, input_smiles, clean_smiles, clean_num_heavies) VALUES (%s, %s, %s, %s, %s)"
+        self.conn.execute(statement,
+                          (compound_idx, compound_id, input_smiles, normalized_smiles, num_normalized_heavies))
+        
+    def add_constant_smiles(self, smiles_idx, constant_smiles):
+        statement = "INSERT INTO constant_smiles (id, smiles) VALUES (%s, %s)"
+        self.conn.execute(statement, (smiles_idx, constant_smiles))
+
+    def add_rule_environment_pair(self, pair_idx, env_idx, compound1_idx, compound2_idx, constant_idx):
+        statement = "INSERT INTO pair (id, rule_environment_id, compound1_id, compound2_id, constant_id) VALUES (%s, %s, %s, %s, %s)"
+        self.conn.execute(statement,
+                          (pair_idx, env_idx, compound1_idx, compound2_idx, constant_idx))
+    
+    def add_compound_property(self, compound_idx, property_name_idx, value):
+        statement = "INSERT INTO compound_property (compound_id, property_name_id, value) VALUES (%s, %s, %s)"
+        self.conn.execute(statement,
+                          (compound_idx, property_name_idx, value))
+
+    def add_rule_environment_statistics(self, rule_env_idx, property_name_idx, values):
+        count, avg, std, kurtosis, skewness, minval, q1, median, q3, maxval, paired_t, p_value = values
+        assert rule_env_idx is not None
+        assert property_name_idx is not None
+        assert count is not None
+        assert avg is not None
+        assert minval is not None
+        assert q1 is not None
+        assert median is not None
+        assert q3 is not None
+        assert maxval is not None
+
+        statement = """
+            INSERT INTO rule_environment_statistics 
+                (rule_environment_id, property_name_id, count, avg, std, kurtosis, 
+                    skewness, min, q1, median, q3, max, paired_t, p_value) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+        self.conn.execute(statement,
+                          (rule_env_idx, property_name_idx, count, avg, std,
+                           kurtosis, skewness, minval, q1, median, q3, maxval, paired_t, p_value))
+
+    def end(self, reporter):
+        reporter.update("Building index ...")
+        schema.create_index(self.conn)
+        
+        # Improve SQLite query planning
+        reporter.update("Analyzing database ...")
+        self.conn.execute("ANALYZE")
+        
+        reporter.update("Computing sizes ...")
+        num_compounds = schema._get_one(self.conn.execute("SELECT count(*) from compound"))
+        num_rules = schema._get_one(self.conn.execute("SELECT count(*) from rule"))
+        num_pairs = schema._get_one(self.conn.execute("SELECT count(*) from pair"))
+        num_envs = schema._get_one(self.conn.execute("SELECT count(*) from rule_environment"))
+        num_stats = schema._get_one(self.conn.execute("SELECT count(*) from rule_environment_statistics"))
+
+        statement = """
+            UPDATE dataset set num_compounds=%s, num_rules=%s, num_pairs=%s, 
+            num_rule_environments=%s, num_rule_environment_stats=%s WHERE id = 1"""
+        self.conn.execute(statement,
+                          (num_compounds, num_rules, num_pairs, num_envs, num_stats))
+        
+        reporter.update("")
 
 class SQLiteIndexWriter(BaseSqliteIndexWriter):
     def close(self):
@@ -276,8 +395,22 @@ class APSWIndexWriter(BaseSqliteIndexWriter):
         #self.conn.execute("ROLLBACK")
         self.conn.close()
         self.db.close()
+
+class MySQLIndexWriter(BaseMySQLIndexWriter):
+    def close(self):
+        self.conn.close()
+        self.db.commit()
+        self.db.close()
+
+    def commit(self):
+        self.conn.close()
+        self.db.commit()
+        self.db.close()
+
+    def rollback(self):
+        self.conn.close()
+        self.db.close()
     
-        
 def open_sqlite_index_writer(filename, title):
     if filename != ":memory:":
         if os.path.exists(filename):
@@ -294,3 +427,15 @@ def open_sqlite_index_writer(filename, title):
 
     return klass(db, conn, title)
 
+def open_mysql_index_writer(dbUrl, title):
+    dbc = urlparse(dbUrl)
+    db = pymysql.connect(host=dbc.hostname,
+                             user=dbc.username,
+                             password=dbc.password,
+                             database=dbc.path.lstrip('/'))
+    klass = MySQLIndexWriter
+
+    schema.create_schema_for_mysql(db)
+    conn = db.cursor()
+
+    return klass(db, conn, title)

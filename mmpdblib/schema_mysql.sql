@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS property_name (
 
 CREATE TABLE IF NOT EXISTS compound_property (
   -- FIXME: MySQL needs AUTO_INCREMENT
-  id $PRIMARY_KEY$,
+  id $PRIMARY_KEY$ AUTO_INCREMENT,
   compound_id INTEGER NOT NULL,
   property_name_id INTEGER NOT NULL,
   value REAL NOT NULL,

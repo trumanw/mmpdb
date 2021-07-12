@@ -54,6 +54,7 @@ from . import _compat
 from . import do_fragment            # new
 import rdkit
 from rdkit import Chem
+from tqdm import tqdm
 
 ###
 
@@ -834,7 +835,135 @@ class VariableFragmentsReducer(object):
             answer = True
 
         return answer
+
+def get_pairs_from_matches(
+        matches_pair_with_args, 
+        max_radius, 
+        max_heavies_transf, 
+        NO_ENUMERATION, 
+        symmetric, 
+        num_cuts, 
+        constant_smiles, 
+        constant_symmetry_class, 
+        relabel_cache, 
+        index_options, 
+        max_frac_trans):
+
+    pairs = []
+    id1, symmetry_class1, smiles1, attachment_order1, enumeration_label1 = matches_pair_with_args[0]
+    id2, symmetry_class2, smiles2, attachment_order2, enumeration_label2 = matches_pair_with_args[1]
+    num_cuts = matches_pair_with_args[2]
+    constant_smiles = matches_pair_with_args[3]
+    constant_symmetry_class = matches_pair_with_args[4]
     
+    if id1 == id2:
+        return
+
+    if max_heavies_transf is not None:
+        num_heavies1 = get_num_heavies(smiles1)
+        num_heavies2 = get_num_heavies(smiles2)
+        if abs(num_heavies2-num_heavies1) > max_heavies_transf:
+            return
+
+    # Simple rejection
+    if smiles1 == smiles2 and attachment_order1 == attachment_order2:
+        return
+
+    # "Two constant parts may not be matched if both of them have the CHI_UP tag"
+    if (enumeration_label1 != NO_ENUMERATION and
+        enumeration_label2 != NO_ENUMERATION):
+        return
+
+    parameters = [
+        (id1, smiles1, symmetry_class1, attachment_order1,
+         id2, smiles2, symmetry_class2, attachment_order2),
+        (id2, smiles2, symmetry_class2, attachment_order2,
+         id1, smiles1, symmetry_class1, attachment_order1),
+         ]
+
+    # Put them in canonical order.
+    if (smiles1, attachment_order1) > (smiles2, attachment_order2):
+        parameters.reverse()
+
+    if not symmetric:
+        del parameters[1]
+
+    for (tmp_id1, tmp_smiles1, tmp_symmetry_class1, tmp_attachment_order1,
+             tmp_id2, tmp_smiles2, tmp_symmetry_class2, tmp_attachment_order2) in parameters:
+            smirks, tmp_constant_smiles = cansmirks(
+                num_cuts,
+                tmp_smiles1, tmp_symmetry_class1, tmp_attachment_order1,
+                constant_smiles, constant_symmetry_class,
+                tmp_smiles2, tmp_symmetry_class2, tmp_attachment_order2,
+                relabel_cache)
+            if index_options.smallest_transformation_only:
+                if Variable_Reducability_Filter.transformation_is_reducible(smirks):
+                    continue
+
+            # Figure out the max radius allowed for environment fingerprints
+            if max_frac_trans is None or max_frac_trans >= 1.0:
+                pass
+            else:
+                max_radius = get_max_radius_for_fraction_transfer(
+                    max_frac_trans, smirks, tmp_constant_smiles, max_radius, environment_cache)
+                if max_radius is None:
+                    # skip this pair
+                    continue
+
+            # yield MatchedMolecularPair(tmp_id1, tmp_id2, smirks, tmp_constant_smiles, max_radius)
+            pairs.append(MatchedMolecularPair(tmp_id1, tmp_id2, smirks, tmp_constant_smiles, max_radius))
+    return pairs
+
+def find_matched_molecular_pairs_v2(
+    index, fragment_reader, index_options=IndexOptions(), environment_cache=EnvironmentCache(),
+    max_radius=5, reporter=None):
+
+    symmetric = index_options.symmetric
+    max_heavies_transf = index_options.max_heavies_transf
+    max_frac_trans = index_options.max_frac_trans
+    
+    counter = itertools.count(0)
+    reporter = reporters.get_reporter(reporter)
+
+    relabel_cache = RelabelCache()
+    NO_ENUMERATION = fragment_algorithm.EnumerationLabel.NO_ENUMERATION
+
+    fragment_filter = do_fragment.get_fragment_filter(fragment_reader.options)
+    Variable_Reducability_Filter = VariableFragmentsReducer(fragment_filter)
+
+    comb_matches_with_args = []
+    with reporter.progress(
+            index.iter_constant_matches(), "Constant fragment matches", len(index)) as it:
+        # Go through the upper-diagonal matrix of the NxN matches
+        for num_cuts, constant_smiles, constant_symmetry_class, matches in it:
+            # Constructing all the possible combinations of pairs with associated args
+            comb_matches = list(itertools.combinations(matches, 2))
+            for comb_matches_it in comb_matches:
+                comb_matches_with_args.append(comb_matches_it + (num_cuts, constant_smiles, constant_symmetry_class))
+    
+    # Processing all the combinations
+    aggr_pairs = []
+
+    # pbar = tqdm(comb_matches_with_args)
+    # for comb_matches_it in pbar:
+        # pbar.set_description("Finding pairs for constant smiles %s" % comb_matches_it[3])
+    for comb_matches_it in tqdm(comb_matches_with_args):
+        pairs = get_pairs_from_matches(comb_matches_it, 
+                max_radius=max_radius, 
+                max_heavies_transf=max_heavies_transf,
+                NO_ENUMERATION=NO_ENUMERATION,
+                symmetric=symmetric, 
+                num_cuts=num_cuts,
+                constant_smiles=constant_smiles,
+                constant_symmetry_class=constant_symmetry_class,
+                relabel_cache=relabel_cache,
+                index_options=index_options,
+                max_frac_trans=max_frac_trans)
+
+        if pairs is not None:
+            aggr_pairs += pairs
+
+    return aggr_pairs
 
 def find_matched_molecular_pairs(
         index, fragment_reader, index_options=IndexOptions(), environment_cache=EnvironmentCache(),
@@ -1204,7 +1333,10 @@ class MMPWriter(BaseWriter):
         has_properties = (self.properties is not None)
 
         pair_i = -1
-        for pair_i, pair in enumerate(pairs):
+        # pbar = tqdm(pairs)
+        # for pair_i, pair in enumerate(pbar):
+            # pbar.set_description("Processing %s " % pair_i)
+        for pair_i, pair in enumerate(tqdm(pairs)):
             # Figure out which rule it goes into.
             rule_idx = self._rule_table[pair.smirks]
 
@@ -1290,6 +1422,9 @@ def open_mmpa_writer(destination, format, title, fragment_options,
     elif format == "mmpdb":
         # The preferred output format.
         index_writer = index_writers.open_sqlite_index_writer(destination, title)
+    elif format == "mysql":
+        # The preferred output db.
+        index_writer = index_writers.open_mysql_index_writer(destination, title)
         
     else:
         raise AssertionError(format)
